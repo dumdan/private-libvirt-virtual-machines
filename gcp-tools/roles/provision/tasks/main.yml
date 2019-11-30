@@ -1,0 +1,173 @@
+---
+# NO SWAP for the time being (k8s does not like/want swap)
+#
+# - name: Create swap device if not there
+#   command: /sbin/mkswap /dev/vdb
+#   when: ansible_swaptotal_mb |int == 0
+# 
+# - name: Make swap entry in fstab
+#   lineinfile:
+#     dest: /etc/fstab
+#     insertafter: EOF
+#     regexp:  '\s+swap\s+swap\s'
+#     line:    '/dev/vdb  swap      swap    defaults        0 0'
+#     state: present
+#   when: ansible_swaptotal_mb |int == 0
+# 
+# - name: Activate swap
+#   command: /sbin/swapon -a
+#   when: ansible_swaptotal_mb |int == 0
+
+- name: determine if the initial setup was ever done
+  stat:
+    path: /dd_provisioned_vm
+  register: dd_provisioned_vm
+  tags: minikube_init
+
+- name: Make sure we have all the packages we may need
+  yum:
+    name:
+      - libselinux-python
+      - yum-utils
+      - vim
+      - wget
+      - tcpdump
+      - mlocate
+      - unzip
+      - tree
+    state: present
+
+- name: Make sure we have all the packages we may need - RHEL 6.x speciffic
+  yum:
+    name:
+      - ntp
+      - ntpdate
+    state: present
+  when:
+    ansible_os_family == "RedHat" and  ansible_distribution_major_version|int < 7
+  tags: rhel6
+
+- name: ... and the services are active - RHEL 6.x speciffic
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: True
+  with_items:
+    - ntpd
+  when:
+    ansible_os_family == "RedHat" and  ansible_distribution_major_version|int < 7
+  tags: rhel6
+
+- name: Make sure we have all the packages we may need - RHEL 7 speciffic
+  yum:
+    state: present
+    name:
+      - bash-completion
+      - chrony
+  when:
+    ansible_os_family == "RedHat" and  ansible_distribution_major_version|int >= 7
+  tags: rhel7
+
+- name: Install the "epel" repo on - RHEL
+  yum:
+    name: epel-release
+    state: present
+  when:
+    ansible_distribution != "Fedora"
+
+- name: Install "chrony" on RHEL 7
+  stat:
+    path: /etc/sysconfig/chronyd
+  register: chrony_syscfg
+  when:
+    ansible_os_family == "RedHat" and  ansible_distribution_major_version|int >= 7
+  tags: rhel7
+
+- name: Set timezone to something we care about 
+  command: timedatectl set-timezone America/Toronto
+  changed_when: False
+
+- name: Adjust /etc/hosts
+  lineinfile:
+    line: "{{ansible_default_ipv4.address}}  {{ansible_fqdn}} {{ansible_hostname}}"
+    insertafter: '^127\.0\.0\.1'
+    state:  present
+    dest: /etc/hosts
+
+- name: Set hostname
+  hostname:
+    name: "{{ansible_fqdn}}"
+
+- name: Check for presence of Avahi
+  command: "systemctl is-enabled avahi-daemon.service >/dev/null 2>&1"
+  failed_when: False
+  changed_when: False
+  register: avahi_check
+  when:
+    ansible_os_family == "RedHat" and  ansible_distribution_major_version|int >= 7
+
+- name: Disable avahi - it has no place on a RHEL server
+  service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  with_items:
+    - avahi-daemon.socket
+    - avahi-daemon.service
+  when:
+    avahi_check == 0 and ansible_os_family == "RedHat" and  ansible_distribution_major_version|int >= 7
+
+- name: check if cloud-init is installed on the system
+  shell: "systemctl list-unit-files --no-legend cloud-*"
+# failed_when: False
+# changed_when: False
+  register: cloudinit_installed
+
+#- name: Update all the packages
+#  yum:
+#    name: '*'
+#    state: latest
+
+- name: ... (auxiliary set_fact)
+  set_fact:
+    cloudinit_installed: "{{ cloudinit_installed.stdout }}"
+# failed_when: False
+# changed_when: False
+
+#- debug:
+#    msg: "CLOUD-INIT value =  {{ cloudinit_installed }}"
+#  when:
+#    cloudinit_installed | length > 0
+
+- name: stop and disable "cloud-init" services
+  service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  with_items:
+    - cloud-config
+    - cloud-final
+    - cloud-init-local
+    - cloud-init
+  when:
+    cloudinit_installed | length > 0
+
+- name: fix the interface settings - NOZEROCONF
+  lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ ansible_default_ipv4['interface'] }}"
+      state: present
+      insertafter: EOF
+      regexp: '^\s*NOZEROCONF'
+      line: 'NOZEROCONF=yes'
+  register: nozeroconf
+
+- include_tasks: noipv6.yml
+
+- name: invoke (call ?) the reboot task
+# include_tasks: reboot.yml
+  include_tasks: shutdown.yml
+# when: >
+#   not dd_provisioned_vm.stat.exists
+ 
+
+
