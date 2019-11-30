@@ -1,0 +1,14 @@
+---
+- name: Create the "marker file" /dd_provisioned_vm 
+  file:
+    path: /dd_provisioned_vm
+    state: touch
+    mode: ugo=r
+
+- name: Shutdown immediately
+# command: /usr/bin/systemd-run --on-active=10 /usr/bin/systemctl --ignore-inhibitors poweroff
+  command: /usr/bin/systemd-run --on-active=5 /usr/bin/systemctl --ignore-inhibitors --no-wall poweroff
+  async: 1
+  poll: 0
+
+

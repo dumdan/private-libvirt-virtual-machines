@@ -1,0 +1,36 @@
+---
+- name: install the LVM packages
+  yum:
+    name:
+      - lvm2
+    state: present
+- name: Prepare the OveralyFS2 volume group for Docker CE
+  lvg:
+    vg: dockervg
+    pvs: /dev/vdb
+- name: Prepare the OveralyFS2 logical volume (lvm2) for Docker CE
+  lvol:
+    active: True
+    size: 100%VG
+    lv: dockerlv
+    vg: dockervg
+- name: create an XFS filesystem on the new lv
+  filesystem:
+      dev: /dev/dockervg/dockerlv
+      fstype: xfs
+      opts: -n ftype=1
+- name: Make entry in fstab
+  lineinfile:
+    dest: /etc/fstab
+    insertafter: EOF
+    regexp:  '\s+dockerlv\s+\/var\/lib\/docker\s'
+    line:    '/dev/dockervg/dockerlv  /var/lib/docker      xfs    defaults        0 2'
+    state: present
+- name: create mountpoint
+  file:
+    path: /var/lib/docker
+    state: directory
+- name:  Actually mount the docker filesystem
+  command: mount -a
+# command: mount /var/lib/docker
+

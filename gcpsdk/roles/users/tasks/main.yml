@@ -1,0 +1,51 @@
+---
+- include_vars: "../vars/userlist.yml"
+
+- include_tasks: fix-ssh.yml
+# notify: restart sshd
+
+- name: notify restart sshd does not work with include_tasks
+  service:
+    name: sshd
+    state: restarted
+  when: pwd_auth.changed or use_dns.changed
+  # the condition variables above come from the included task (fix-ssh.yml)
+
+- name: Create groups
+  group:
+    state: present
+    name: "{{ grp.name }}"
+    gid: "{{ grp.group }}"
+  loop: "{{ new_groups }}"
+  loop_control:
+      loop_var: grp
+  when: new_groups is defined
+
+- name: Create user accounts
+  user:
+    state: present
+    name: "{{ usr.name }}"
+    uid:  "{{ usr.uid | default(omit) }}"
+    group:  "{{ usr.gid | default(omit) }}"
+    groups: "{{ usr.groups | default(omit) }}"
+    comment: "{{ usr.gecos }}"
+    password: "{{ usr.pwd | default(None) | password_hash('sha512', '3000') or omit }}"
+  loop: "{{ new_users }}"
+  loop_control:
+    loop_var: usr
+
+- name: Set-up sudo privileges for our users
+  copy:
+          content: "{{ item.name }} ALL=(ALL) ALL"
+          dest: /etc/sudoers.d/92-{{ item.name }}
+  when: item.sudo is defined and item.sudo
+  with_items: "{{ new_users }}"
+
+- name: Set-up SUPER sudo privileges for our users
+  copy:
+          content: "{{ item.name }} ALL=(ALL) NOPASSWD:ALL"
+          dest: /etc/sudoers.d/93-{{ item.name }}
+  when: item.sudo_nopwd is defined and item.sudo_nopwd
+  with_items: "{{ new_users }}"
+
+

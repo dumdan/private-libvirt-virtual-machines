@@ -1,0 +1,16 @@
+---
+- name: Create a "Google Cloud SDK" repo 
+  copy:
+    dest: /etc/yum.repos.d/
+    src: google-cloud-sdk.repo
+    mode: 644
+  tags: gcpsdk
+
+- name: Install the SDK
+  yum:
+    name:
+      - google-cloud-sdk
+    state: present
+  tags: gcpsdk
+
+

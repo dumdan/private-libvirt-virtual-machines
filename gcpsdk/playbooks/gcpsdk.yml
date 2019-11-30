@@ -1,0 +1,16 @@
+---
+- name : Play 01 - setup
+  hosts: gcpsdk
+  become: True
+  gather_facts: True
+
+  tasks:
+    - name: execute "roles" playbooks
+      include_role:
+        name: "{{ mk_role }}"
+      loop:
+          - roles/gcpsdk
+      loop_control:
+        loop_var: mk_role
+
+
