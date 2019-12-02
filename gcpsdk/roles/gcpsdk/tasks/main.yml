@@ -10,7 +10,10 @@
   yum:
     name:
       - google-cloud-sdk
+      - google-cloud-sdk-app-engine-python
+      - kubectl
     state: present
-  tags: gcpsdk
+  tags:
+    - gcpsdk
 
 
