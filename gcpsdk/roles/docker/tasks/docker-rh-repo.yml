@@ -1,0 +1,33 @@
+---
+- name: install Docker, but DO NOT start it !
+  yum:
+    name:
+      - docker
+      - lvm2
+    state: present
+
+- name: create the storage configuration file
+  lineinfile:
+    path: /etc/sysconfig/docker-storage-setup
+    line: "{{ item }}"
+  with_items:
+    - STORAGE_DRIVER=overlay2
+    - DEVS=/dev/vdb
+    - CONTAINER_ROOT_LV_NAME=dockerlv
+    - CONTAINER_ROOT_LV_SIZE=100%FREE
+    - CONTAINER_ROOT_LV_MOUNT_PATH=/var/lib/docker
+    - VG=dockervg
+
+- name: configure that storage
+  command: docker-storage-setup
+
+- name: ... and make sure the service is enabled & started
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: True
+  with_items:
+    - docker
+  tags: docker
+
+

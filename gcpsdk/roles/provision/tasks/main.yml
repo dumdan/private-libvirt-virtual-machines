@@ -27,7 +27,7 @@
 - name: Make sure we have all the packages we may need
   yum:
     name:
-      - libselinux-python
+#     - libselinux-python
       - yum-utils
       - vim
       - wget

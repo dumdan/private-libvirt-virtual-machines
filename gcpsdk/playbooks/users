@@ -1,0 +1,16 @@
+---
+- name : Play 01 - setup
+  hosts: gcpsdk
+  become: True
+  gather_facts: True
+
+  tasks:
+    - name: add users
+      include_role:
+        name: "{{ my_role }}"
+      loop:
+          - roles/users
+      loop_control:
+        loop_var: my_role
+
+
