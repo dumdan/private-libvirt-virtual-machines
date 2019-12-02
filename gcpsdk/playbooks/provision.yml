@@ -1,5 +1,5 @@
 ---
-- name : Play 00 - timestamp setup if / when needed 
+- name : Play Provisioning 00 - timestamp setup if / when needed 
   hosts: localhost
   connection: local
   become: False
@@ -12,27 +12,18 @@
     - set_fact:
         timestamp: "{{ ansible_date_time.iso8601 | regex_replace('\\:', '-') }}"
 
-- name : Play 01 - setup
+- name : Play Provisioning 01 - actual OS-level Config
   hosts: gcpsdk
   become: True
   gather_facts: True
 
   tasks:
-    - name: execute "roles" playbooks
-      include_role:
+#   - name: execute "roles" playbooks
+    - include_role:
         name: "{{ my_role }}"
       loop:
         - roles/provision
       loop_control:
         loop_var: my_role
 
-#- name: Play 2
-#  hosts: localhost
-#  gather_facts: False
-#
-#  tasks:
-#      - debug:
-#          msg: "EXIT !"
-#
-#      - meta: end_play
 

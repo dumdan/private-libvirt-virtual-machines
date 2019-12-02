@@ -1,12 +1,11 @@
 ---
-- name : Play 01 - setup
+- name : Docker Play
   hosts: gcpsdk
   become: True
   gather_facts: True
 
   tasks:
-    - name: execute "roles" playbooks
-      include_role:
+    - include_role:
         name: "{{ my_role }}"
       loop:
           - roles/docker

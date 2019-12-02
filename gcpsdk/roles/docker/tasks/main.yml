@@ -1,5 +1,5 @@
 ---
-- name: Create groups
+- name: Create "docker" group
   group:
     state: present
     name: "docker"
@@ -8,7 +8,7 @@
 - name: Install Docker form the distro repos for Fedora (Docker release 13, I think ?)
   include_tasks: docker-rh-repo.yml
   when:
-    ansible_os_family == "RedHat" and ansible_distribution == "Fedora" and ansible_distribution_major_version|int >= 29
+    ansible_os_family == "RedHat" and ansible_distribution == "Fedora" and ansible_distribution_major_version|int < 31
   tags: fedora
 
 - name: Install Docker-CE on RHEL or CentOS 7+
@@ -17,9 +17,10 @@
     ansible_os_family == "RedHat" and ansible_distribution != "Fedora" and ansible_distribution_major_version|int >= 7
   tags: rhel7
 
-- name: In case none of the above, we give up 
-  debug:
-    msg: "EXIT !"
-- meta: end_play
+# the exit if none of the above requires a bit of work ...
+#- name: In case none of the above, we give up 
+#  debug:
+#    msg: "EXIT !"
+#- meta: end_play
 
 
