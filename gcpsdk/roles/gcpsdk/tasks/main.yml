@@ -12,6 +12,7 @@
       - google-cloud-sdk
       - google-cloud-sdk-app-engine-python
       - kubectl
+      - git
     state: present
   tags:
     - gcpsdk
